@@ -1,0 +1,48 @@
+#!/bin/bash 
+
+function Till(){
+    till="$@"
+    current_epoch=$(date +%s)
+    target_epoch="$(date -d "$till" +%s 2>&1)" || { r=$?; echo $target_epoch 1>&2 ; return $r; }
+    sleep_seconds=$(( $target_epoch - $current_epoch ))
+    echo $sleep_seconds
+}
+
+function usage(){
+    echo "usage: $0 \"Some Appointment\" ( at || in ) \"sometime/date\""
+    echo
+    echo "example 1: $0 Climbing at 2:30"
+    echo "example 2: $0 Work in 10 minutes"
+}
+
+function notify(){
+    sleep $1
+    wall "$2"
+    notify-send -i calendar "$2"  "Suspending in 5 seconds."
+    sleep 5
+    systemctl suspend
+}
+
+
+function main(){
+    message="leave for $1"
+    shift 2
+    s=$(Till $@ ) || { return $?; }
+    notify $s "$message" &
+    return 0
+}
+
+# check arguments
+if [ "$#" -lt "3" ]; then
+    usage 
+    exit 1;
+fi
+
+if [ "$2" != "at" ] && [ "$2" != "in" ]; then
+    echo "ERROR: could not parse your input. The word 'at' or 'in' shoudl appear in your text"
+    usage
+    exit 1;
+fi
+
+main $@
+
